@@ -61,6 +61,7 @@ public class ServerActivity extends AppCompatActivity implements View.OnClickLis
         }catch (Exception e)
         {
             e.printStackTrace();
+            Log.d(TAG, "error");
         }
 
     }
