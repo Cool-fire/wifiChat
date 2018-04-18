@@ -1,6 +1,7 @@
 package com.example.root.wifichat;
 
 import android.os.AsyncTask;
+import android.os.BatteryManager;
 import android.os.Handler;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -94,11 +95,21 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
                 InetAddress serverAddr = InetAddress.getByName(SERVER_IP);
                 socket = new Socket(serverAddr, SERVERPORT);
 
+                BatteryManager bm = (BatteryManager)getSystemService(BATTERY_SERVICE);
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+                    int batLevel = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+                    new send().execute(String.valueOf(batLevel));
+                }
+
                 tempSocket = socket;
 
                 while (!Thread.currentThread().isInterrupted()) {
 
                     Log.i(TAG, "Waiting for message from server...");
+
+
+
+
 
                     this.input = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                     String message = input.readLine();
@@ -152,6 +163,14 @@ public class ChatActivity extends AppCompatActivity implements View.OnClickListe
         if (null != clientThread) {
             new send().execute("disconnect");
             clientThread = null;
+        }
+        if(null!=tempSocket)
+        {
+            try {
+                tempSocket.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 

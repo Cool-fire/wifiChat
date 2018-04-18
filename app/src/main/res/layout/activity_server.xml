@@ -5,17 +5,50 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical">
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
     <Button
         android:id="@+id/start_server"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:onClick="onClick"
         android:text="Start Server" />
+        <TextView
+            android:id="@+id/ipAd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@+id/start_server"
+            android:textSize="27dp"
+            tools:text="10.0.4.67"/>
+
+    </RelativeLayout>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <TextView
+            android:id="@+id/btText"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text = "Battery :"
+            android:textColor="@color/Dark"
+            android:textSize="26dp"/>
+        <EditText
+            android:id="@+id/batteryEdt"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:onClick="onClick"
+            android:layout_toRightOf="@id/btText"
+             />
+    </RelativeLayout>
 
     <RelativeLayout
         android:id="@+id/relative"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content">
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp">
 
         <EditText
             android:id="@+id/send_text"

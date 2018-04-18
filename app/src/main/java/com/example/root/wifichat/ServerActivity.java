@@ -1,8 +1,12 @@
 package com.example.root.wifichat;
 
+import android.annotation.SuppressLint;
+import android.net.wifi.WifiManager;
 import android.os.AsyncTask;
+import android.os.BatteryManager;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.text.format.Formatter;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
@@ -28,16 +32,36 @@ public class ServerActivity extends AppCompatActivity implements View.OnClickLis
     Thread serverThread = null;
     public static final int SERVER_PORT = 3000;
     TextView messageTv;
-    private EditText inputTexttoServer;
+    TextView ipAd;
+    private EditText inputTexttoServer,batteryEdt;
+    private Integer clientBattery = 25;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_server);
 
+        ipAd = (TextView)findViewById(R.id.ipAd);
         messageTv = (TextView) findViewById(R.id.messageTv);
         inputTexttoServer = (EditText)findViewById(R.id.send_text);
+        batteryEdt = (EditText)findViewById(R.id.batteryEdt);
 
+        BatteryManager bm = (BatteryManager)getSystemService(BATTERY_SERVICE);
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP) {
+            int batLevel = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
+            Log.d(TAG, String.valueOf(batLevel));
+        }
+
+
+        @SuppressLint("WifiManagerLeak") WifiManager wf = (WifiManager)getSystemService(WIFI_SERVICE);
+        try {
+            String ip = Formatter.formatIpAddress(wf.getConnectionInfo().getIpAddress());
+            Log.d(TAG, ip);
+            ipAd.setText(ip);
+        }catch (Exception e)
+        {
+            e.printStackTrace();
+        }
 
     }
 
@@ -78,10 +102,16 @@ public class ServerActivity extends AppCompatActivity implements View.OnClickLis
         protected Void doInBackground(String... strings) {
             try {
                 if (null != tempClientSocket) {
-                    PrintWriter out = new PrintWriter(new BufferedWriter(
-                            new OutputStreamWriter(tempClientSocket.getOutputStream())),
-                            true);
-                    out.println(strings[0]);
+                    if(!tempClientSocket.isClosed())
+                    {
+                        Log.d(TAG, "send from server to client"+tempClientSocket.getRemoteSocketAddress().toString());
+
+                        PrintWriter out = new PrintWriter(new BufferedWriter(
+                                new OutputStreamWriter(tempClientSocket.getOutputStream())),
+                                true);
+
+                        out.println(strings[0]);
+                    }
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -103,6 +133,7 @@ public class ServerActivity extends AppCompatActivity implements View.OnClickLis
                 while (!Thread.currentThread().isInterrupted()) {
                     try {
                         socket = serverSocket.accept();
+                        Log.d(TAG, socket.getRemoteSocketAddress().toString());
                         CommunicationThread commThread = new CommunicationThread(socket);
                         new Thread(commThread).start();
                     } catch (IOException e) {
@@ -142,12 +173,40 @@ public class ServerActivity extends AppCompatActivity implements View.OnClickLis
                     String read = input.readLine();
                     Log.i(TAG, "Message Received from Client : " + read);
 
-                    if (null == read || "Disconnect".contentEquals(read)) {
+                    try{
+                        if(batteryEdt.getText().toString().matches(""))
+                        {
+                            clientBattery = 25;
+                            Log.d(TAG, "battery: "+clientBattery);
+                        }
+                        else
+                        {
+                            clientBattery = Integer.valueOf(batteryEdt.getText().toString());
+                            Log.d(TAG, "battery: "+clientBattery);
+                        }
+
+                        if(Integer.valueOf(read) <= clientBattery)
+                        {
+                            sendMessage("Disconnecting due to less battery");
+                            read = "Client Disconnected due to shortage of battery";
+                            updateMessage(getTime() + " | Client : " + read);
+                            tempClientSocket.close();
+                            Thread.interrupted();
+                            break;
+                        }
+                    }catch (Exception e)
+                    {
+                        e.printStackTrace();
+                    }
+
+
+                     if (null == read || "Disconnect".contentEquals(read)) {
                         Thread.interrupted();
                         read = "Client Disconnected";
                         updateMessage(getTime() + " | Client : " + read);
                         break;
                     }
+
                     updateMessage(getTime() + " | Client : " + read);
 
                 } catch (IOException e) {
@@ -171,6 +230,15 @@ public class ServerActivity extends AppCompatActivity implements View.OnClickLis
             sendMessage("Disconnect");
             serverThread.interrupt();
             serverThread = null;
+            if(tempClientSocket!=null)
+            {
+                try {
+                    Log.d(TAG, "onDestroy: ");
+                    tempClientSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 
@@ -182,6 +250,15 @@ public class ServerActivity extends AppCompatActivity implements View.OnClickLis
             sendMessage("Disconnect");
             serverThread.interrupt();
             serverThread = null;
+            if(tempClientSocket!=null)
+            {
+                Log.d(TAG, "onStop: ");
+                try {
+                    tempClientSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
         }
     }
 }
